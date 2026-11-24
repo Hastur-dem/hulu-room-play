@@ -84,7 +84,7 @@
   try {
     state.textContent = '正在打开小屋…';
     progress.hidden = false;
-    const names = ["start-8cae0464adafcc41.bin","compat-40cccb599bfb90f0.bin"];
+    const names = ["start-54a76b28b7bd584b.bin","compat-9972ac128442b3f7.bin"];
     const compressed = typeof DecompressionStream === 'function' && typeof Blob.prototype.stream === 'function'
       && typeof ReadableStream === 'function' && typeof ReadableStream.prototype.pipeThrough === 'function';
     const bytes = await openPacket(names[compressed ? 0 : 1], new Set(names), progress);
