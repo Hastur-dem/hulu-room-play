@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow, noarchive"><meta name="referrer" content="no-referrer">
+<title>呼噜小屋 · 好友试玩</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f7f5ec;color:#344537;font:17px/1.65 system-ui,sans-serif;min-height:100svh;display:grid;place-items:center}main{max-width:26rem;padding:28px;text-align:center}h1{font:600 32px/1.2 Georgia,"Songti SC",serif}progress{accent-color:#475f49;width:100%;height:6px}button{border:0;border-radius:20px;background:#405b43;color:white;font:inherit;padding:6px 20px;cursor:pointer}
+</style></head><body><main><h1>呼噜小屋</h1><p id="state" role="status">请用朋友发来的完整链接打开试玩。</p><progress hidden id="progress"></progress><button hidden id="retry">重新载入</button></main>
+<script>
+(async () => {
+  const key = location.hash.slice(1);
+  if (!/^[A-Za-z0-9_-]{43}$/.test(key)) return;
+  const state = document.getElementById('state');
+  const progress = document.getElementById('progress');
+  document.getElementById('retry').onclick = () => location.reload();
+  try {
+    state.textContent = '正在准备橘子、松栗和山君…';
+    progress.hidden = false;
+    const rawKey = Uint8Array.from(atob(key.replace(/-/g,'+').replace(/_/g,'/') + '='), c => c.charCodeAt(0));
+    const secret = await crypto.subtle.importKey('raw', rawKey, 'AES-GCM', false, ['decrypt']);
+    const response = await fetch('./room.bin');
+    if (!response.ok) throw Error('download');
+    const reader = response.body.getReader();
+    const total = Number(response.headers.get('content-length'));
+    if (total > 0) progress.max = total;
+    let received = 0;
+    const chunks = [];
+    for (;;) {
+      const {done,value} = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      received += value.length;
+      if (total > 0) progress.value = received;
+    }
+    const packed = new Uint8Array(await new Blob(chunks).arrayBuffer());
+    const html = await crypto.subtle.decrypt({name:'AES-GCM',iv:packed.subarray(0,12)}, secret, packed.subarray(12));
+    const code = new TextDecoder().decode(html);
+    document.open();
+    document.write(code);
+    document.close();
+  } catch {
+    progress.hidden = true;
+    state.textContent = '载入失败。请检查网络，或重新打开朋友发来的完整链接。';
+    document.getElementById('retry').hidden = false;
+  }
+})();
+</script></body></html>
