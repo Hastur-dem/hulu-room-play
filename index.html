@@ -26,12 +26,16 @@
     return key;
   }
 
-  async function openPacket(file, allowed, progress) {
+  async function openPacket(file, allowed, progress, signals = []) {
     if (!allowed.has(file)) throw Error('未知资源');
     const url = new URL('./' + file, location.href);
     if (url.origin !== location.origin) throw Error('资源域名无效');
     for (let attempt = 0; ; attempt++) {
       const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+      const cancelled = () => signals.some(signal => signal.aborted);
+      if (cancelled()) throw new DOMException('Scene closed','AbortError');
+      const abort = () => ctrl?.abort();
+      for (const signal of signals) signal.addEventListener('abort',abort,{once:true});
       let timeout;
       function arm(ms) {
         clearTimeout(timeout);
@@ -70,10 +74,11 @@
         const params = {name:'AES-GCM', iv:bytes.subarray(0,12), additionalData:new TextEncoder().encode(file)};
         return await crypto.subtle.decrypt(params, await importInvite(), bytes.subarray(12));
       } catch (error) {
-        if (attempt) throw error;
+        if (attempt || cancelled()) throw error;
         await new Promise(resolve => setTimeout(resolve, 450));
       } finally {
         clearTimeout(timeout);
+        for (const signal of signals) signal.removeEventListener('abort',abort);
       }
     }
   }
@@ -84,7 +89,15 @@
   try {
     state.textContent = '正在打开小屋…';
     progress.hidden = false;
-    const names = ["start-54a76b28b7bd584b.bin","compat-9972ac128442b3f7.bin"];
+    const names = ["start-ab946e01aa942ee7.bin","compat-6d10584995bc012d.bin"];
+    let lastAnimal;
+    try { lastAnimal = JSON.parse(localStorage.getItem('purr-room-juzi-v1'))?.selected; } catch {}
+    if (!lastAnimal || lastAnimal === 'orange') {
+      const file = "cat-dcc3716fc4825137.bin";
+      const controller = typeof AbortController === 'function' ? new AbortController() : null;
+      window.huluFirstPhoto = {file,controller, result:openPacket(file,new Set([file]),null,controller ? [controller.signal] : [])
+        .then(bytes => ({bytes}), error => ({error}))};
+    }
     const compressed = typeof DecompressionStream === 'function' && typeof Blob.prototype.stream === 'function'
       && typeof ReadableStream === 'function' && typeof ReadableStream.prototype.pipeThrough === 'function';
     const bytes = await openPacket(names[compressed ? 0 : 1], new Set(names), progress);
@@ -92,6 +105,8 @@
       : new TextDecoder().decode(bytes);
     document.open(); document.write(html); document.close();
   } catch {
+    window.huluFirstPhoto?.controller?.abort();
+    delete window.huluFirstPhoto;
     progress.hidden = true;
     state.textContent = '载入失败。请检查网络，或重新打开朋友发来的完整链接。';
     document.getElementById('retry').hidden = false;
