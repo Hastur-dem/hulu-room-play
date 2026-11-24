@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow, noarchive"><meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src blob: data:; media-src blob:; connect-src 'self'; object-src 'none'; form-action 'none'; base-uri 'none'">
 <title>呼噜小屋 · 好友试玩</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#f7f5ec;color:#344537;font:17px/1.65 system-ui,sans-serif;min-height:100svh;display:grid;place-items:center}main{max-width:26rem;padding:28px;text-align:center}h1{font:600 32px/1.2 Georgia,"Songti SC",serif}progress{accent-color:#475f49;width:100%;height:6px}button{border:0;border-radius:20px;background:#405b43;color:white;font:inherit;padding:6px 20px;cursor:pointer}
@@ -9,31 +10,71 @@
 (async () => {
   const key = location.hash.slice(1);
   if (!/^[A-Za-z0-9_-]{43}$/.test(key)) return;
+
+  let secret;
+  function getKey() {
+    if (!secret) {
+      const code = location.hash.slice(1);
+      if (!/^[A-Za-z0-9_-]{43}$/.test(code)) throw Error('invite');
+      const bytes = Uint8Array.from(atob(code.replace(/-/g,'+').replace(/_/g,'/') + '='), c => c.charCodeAt(0));
+      secret = crypto.subtle.importKey('raw', bytes, 'AES-GCM', false, ['decrypt']);
+    }
+    return secret;
+  }
+  async function getBytes(file, allowedFiles, progress) {
+    if (!allowedFiles.includes(file)) throw Error('unknown file');
+    const address = new URL('./' + file, location.href);
+    if (address.origin !== location.origin) throw Error('origin');
+    for (let attempt = 0; ; attempt++) {
+      let ctrl = typeof AbortController === 'function' ? new AbortController() : null, timer;
+      const arm = ms => { clearTimeout(timer); if (ctrl) timer = setTimeout(() => ctrl.abort(), ms); };
+      try {
+        if (progress) progress.removeAttribute('value');
+        arm(75000);
+        const options = {credentials:'omit', redirect:'error', referrerPolicy:'no-referrer', mode:'same-origin'};
+        if (ctrl) options.signal = ctrl.signal;
+        if (attempt) options.cache='reload';
+        const r = await fetch(address.href, options);
+        if (!r.ok) throw Error('HTTP ' + r.status);
+        const total = Number(r.headers.get('content-length'));
+        let bytes;
+        if (progress && r.body && typeof r.body.getReader === 'function') {
+          const reader=r.body.getReader(), chunks=[];let read=0;
+          if (total>0) progress.max=total;
+          while (true) {
+            const part=await reader.read();
+            if(part.done) break;
+            chunks.push(part.value);read+=part.value.byteLength;arm(75000);
+            if(total>0) progress.value=read;
+          }
+          bytes=new Uint8Array(read);let at=0;
+          for(const chunk of chunks){bytes.set(chunk,at);at+=chunk.byteLength;}
+        } else {
+          // Browsers without a streaming Fetch implementation can still read complete responses.
+          arm(300000);bytes=new Uint8Array(await r.arrayBuffer());
+        }
+        if(bytes.length<29) throw Error('incomplete');
+        return await crypto.subtle.decrypt({name:'AES-GCM',iv:bytes.subarray(0,12),additionalData:new TextEncoder().encode(file)},await getKey(),bytes.subarray(12));
+      } catch(error) {
+        if(attempt || error.name==='OperationError' || error.message==='invite') throw error;
+        await new Promise(done=>setTimeout(done,450));
+      } finally {clearTimeout(timer);}
+    }
+  }
+
   const state = document.getElementById('state');
   const progress = document.getElementById('progress');
   document.getElementById('retry').onclick = () => location.reload();
   try {
-    state.textContent = '正在准备橘子、松栗和山君…';
+    state.textContent = '正在打开小屋…';
     progress.hidden = false;
-    const rawKey = Uint8Array.from(atob(key.replace(/-/g,'+').replace(/_/g,'/') + '='), c => c.charCodeAt(0));
-    const secret = await crypto.subtle.importKey('raw', rawKey, 'AES-GCM', false, ['decrypt']);
-    const response = await fetch('./room.bin');
-    if (!response.ok) throw Error('download');
-    const reader = response.body.getReader();
-    const total = Number(response.headers.get('content-length'));
-    if (total > 0) progress.max = total;
-    let received = 0;
-    const chunks = [];
-    for (;;) {
-      const {done,value} = await reader.read();
-      if (done) break;
-      chunks.push(value);
-      received += value.length;
-      if (total > 0) progress.value = received;
-    }
-    const packed = new Uint8Array(await new Blob(chunks).arrayBuffer());
-    const html = await crypto.subtle.decrypt({name:'AES-GCM',iv:packed.subarray(0,12)}, secret, packed.subarray(12));
-    const code = new TextDecoder().decode(html);
+    const allowedFiles = ['start.bin','start-plain.bin'];
+    const compressed = typeof DecompressionStream === 'function' && typeof Blob.prototype.stream === 'function'
+      && typeof ReadableStream === 'function' && typeof ReadableStream.prototype.pipeThrough === 'function';
+    const file = compressed ? 'start.bin' : 'start-plain.bin';
+    const data = await getBytes(file, allowedFiles, progress);
+    const code = compressed ? await new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream('gzip'))).text()
+      : new TextDecoder().decode(data);
     document.open();
     document.write(code);
     document.close();
