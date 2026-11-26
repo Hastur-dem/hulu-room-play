@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow, noarchive">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src blob: data:; media-src blob:; connect-src 'self'; object-src 'none'; form-action 'none'; base-uri 'none'">
+  <title>呼噜小屋 · 声音对照</title>
+  <style>
+    :root{color-scheme:light;background:#f7f4ec;color:#244237;font:16px/1.6 system-ui,sans-serif}
+    *{box-sizing:border-box}
+    body{max-width:44rem;margin:auto;padding:1.25rem 1.125rem 4rem}
+    h1,h2,h3{font-family:Georgia,"Songti SC",SimSun,serif;line-height:1.25}
+    h1{font-size:clamp(1.75rem,7vw,2.55rem);margin:.5rem 0}
+    h2,h3,p{margin:.55rem 0}
+    h2{font-size:1.3rem}
+    h3{font-size:1.02rem}
+    a{color:#284e3d;text-underline-offset:.25em}
+    button,summary{cursor:pointer}
+    button{color:#fff;background:#355643;border:0;border-radius:1.5rem;min-height:44px;padding:.4rem 1rem;font:inherit}
+    button:disabled{opacity:.6;cursor:wait}
+    summary{padding:.6rem 0}
+    :focus-visible{outline:2px solid #416451;outline-offset:.2rem}
+    section{border-top:1px solid #d5dacd;padding:.95rem 0}
+    header{margin-bottom:1.1rem}
+    .set{padding:.5rem 0}
+    .tracks{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,15rem),1fr));gap:.65rem;margin:.35rem 0}
+    figure{margin:0}
+    audio{width:100%;min-height:44px}
+    .status{color:#3f5347;font-size:.91rem}
+    .credits{font-size:.88rem}
+    [hidden]{display:none!important}
+  </style>
+</head>
+<body>
+<header>
+  <a id="back-to-room" href="./">返回小屋</a>
+  <h1>呼噜小屋 · 声音对照</h1>
+  <p id="gate-note">请从朋友发来的完整链接打开小屋，再点「声音对照」。</p>
+</header>
+<main id="listen" hidden>
+  <p>关闭蓝牙，用手机低音量外放，切换前后两段时保持同一档音量。</p>
+  <section aria-labelledby="orange-title">
+    <h2 id="orange-title">橘子 · 呼噜</h2>
+    <p>轻抚脸颊，听呼噜怎样起声、松手后怎样淡下去。</p>
+    <div class="set" data-tracks="orange-ordinary-before orange-ordinary-after">
+      <h3>常态抚颊</h3>
+    </div>
+    <details>
+      <summary>沉浸模式与原录音</summary>
+      <div class="set" data-tracks="orange-immersive-before orange-immersive-after">
+        <h3>沉浸抚颊</h3>
+      </div>
+      <div class="set" data-tracks="orange-origin orange-pcm orange-loop" data-labels="原录音同段|产品素材|候选连续呼噜">
+        <h3>原录音、产品素材与长循环</h3>
+      </div>
+    </details>
+  </section>
+  <section aria-labelledby="golden-title">
+    <h2 id="golden-title">麦穗 · 玩球后的轻喘</h2>
+    <p>先听拨球，再听麦穗把球交出或放回爪边之后的呼吸。</p>
+    <div class="set" data-tracks="golden-catch-before golden-catch-after">
+      <h3>接到球</h3>
+    </div>
+    <div class="set" data-tracks="golden-decline-before golden-decline-after">
+      <h3>让麦穗自己放回球</h3>
+    </div>
+  </section>
+  <section aria-labelledby="extra-title">
+    <h2 id="extra-title">其他录音</h2>
+    <details>
+      <summary>栗丸、灰团与墨斑</summary>
+      <div class="set" data-tracks="shiba-before shiba-after"><h3>栗丸 · 抚额、闻手和循迹</h3></div>
+      <div class="set" data-tracks="gray-before gray-after"><h3>灰团 · 沉浸室内底声</h3></div>
+      <div class="set" data-tracks="jaguar-before jaguar-after"><h3>墨斑 · 碰到岩面时的声音</h3></div>
+    </details>
+  </section>
+  <section aria-labelledby="check-title">
+    <h2 id="check-title">回到小屋再试三件事</h2>
+    <ol>
+      <li>声音响起时切静音，再打开，听旧声会不会回来。</li>
+      <li>快速切换动物，听上一只的声音有没有留下。</li>
+      <li>切到别的应用再回来，听上一段动作音会不会重播。</li>
+    </ol>
+    <p>iPhone 可以保持同一媒体音量，分别用系统静音打开和关闭各试一次。</p>
+    <a id="return-to-room" href="./">返回小屋试玩</a>
+  </section>
+  <footer class="credits">
+    <p>试听文件为同一套网页混音导出的 MP3，前后保留相对音量。</p>
+    <p>原声来源包括 <a href="https://freesound.org/people/%C3%91ado/sounds/843098/">Ñado 的猫呼噜</a>、
+       <a href="https://freesound.org/people/keweldog/sounds/181767/">keweldog 的狗喘息</a>、
+       <a href="https://freesound.org/people/fthgurdy/sounds/528939/">fthgurdy 的狗嗅气</a>、
+       <a href="https://freesound.org/people/RafaStone/sounds/264332/">RafaStone 的狗短吠</a>和
+       <a href="https://freesound.org/people/kyles/sounds/413852/">kyles 的室内底声</a>，均为
+       <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0 1.0</a>。墨斑擦岩为项目拟音。</p>
+  </footer>
+</main>
+<script>
+(() => {
+    let key;
+  function importInvite() {
+    const text = location.hash.slice(1);
+    if (!/^[A-Za-z0-9_-]{43}$/.test(text)) throw Error('无效的试玩链接');
+    if (!key) {
+      const bytes = Uint8Array.from(atob(text.replace(/-/g, '+').replace(/_/g, '/') + '='), c => c.charCodeAt(0));
+      key = crypto.subtle.importKey('raw', bytes, 'AES-GCM', false, ['decrypt']);
+    }
+    return key;
+  }
+
+  async function openPacket(file, allowed, progress, signals = []) {
+    if (!allowed.has(file)) throw Error('未知资源');
+    const url = new URL('./' + file, location.href);
+    if (url.origin !== location.origin) throw Error('资源域名无效');
+    for (let attempt = 0; ; attempt++) {
+      const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+      const cancelled = () => signals.some(signal => signal.aborted);
+      if (cancelled()) throw new DOMException('Scene closed','AbortError');
+      const abort = () => ctrl?.abort();
+      for (const signal of signals) signal.addEventListener('abort',abort,{once:true});
+      let timeout;
+      function arm(ms) {
+        clearTimeout(timeout);
+        if (ctrl) timeout = setTimeout(() => ctrl.abort(), ms);
+      }
+      try {
+        if (progress) progress.removeAttribute('value');
+        arm(75000);
+        const options = {mode:'same-origin', credentials:'omit', redirect:'error', referrerPolicy:'no-referrer'};
+        if (ctrl) options.signal = ctrl.signal;
+        if (attempt) options.cache = 'reload';
+        const response = await fetch(url.href, options);
+        if (!response.ok) throw Error('HTTP ' + response.status);
+        let bytes;
+        if (progress && response.body && typeof response.body.getReader === 'function') {
+          const reader = response.body.getReader(), chunks = [];
+          const total = Number(response.headers.get('content-length'));
+          if (total > 0) progress.max = total;
+          let length = 0;
+          while (true) {
+            const part = await reader.read();
+            if (part.done) break;
+            chunks.push(part.value);
+            length += part.value.byteLength;
+            arm(75000);
+            if (total > 0) progress.value = length;
+          }
+          bytes = new Uint8Array(length);
+          let offset = 0;
+          for (const chunk of chunks) {bytes.set(chunk, offset); offset += chunk.byteLength;}
+        } else {
+          arm(300000);
+          bytes = new Uint8Array(await response.arrayBuffer());
+        }
+        if (bytes.length < 29) throw Error('资源不完整');
+        const params = {name:'AES-GCM', iv:bytes.subarray(0,12), additionalData:new TextEncoder().encode(file)};
+        return await crypto.subtle.decrypt(params, await importInvite(), bytes.subarray(12));
+      } catch (error) {
+        if (attempt || cancelled()) throw error;
+        await new Promise(resolve => setTimeout(resolve, 450));
+      } finally {
+        clearTimeout(timeout);
+        for (const signal of signals) signal.removeEventListener('abort',abort);
+      }
+    }
+  }
+
+  const recordings = {"orange-ordinary-before":"friend-audio-orange-ordinary-before-fdd71dfc8d1640fb.bin","orange-ordinary-after":"friend-audio-orange-ordinary-after-01e64fa6194798d0.bin","orange-immersive-before":"friend-audio-orange-immersive-before-ba3b6b51293c5a65.bin","orange-immersive-after":"friend-audio-orange-immersive-after-c343d2d76958a37d.bin","golden-catch-before":"friend-audio-golden-catch-before-05f5bd0a2607edcc.bin","golden-catch-after":"friend-audio-golden-catch-after-52fba724d5c25094.bin","golden-decline-before":"friend-audio-golden-decline-before-2bf0d8b3ded239ac.bin","golden-decline-after":"friend-audio-golden-decline-after-9b1ac08e7989d460.bin","shiba-before":"friend-audio-shiba-before-c7c0098158beb688.bin","shiba-after":"friend-audio-shiba-after-b31566e83c1c8591.bin","gray-before":"friend-audio-gray-before-0be500d6945c7708.bin","gray-after":"friend-audio-gray-after-d2adfaba6206b315.bin","jaguar-before":"friend-audio-jaguar-before-5a8bb2a234ce37af.bin","jaguar-after":"friend-audio-jaguar-after-77d1ac71ddbad6ac.bin","orange-origin":"friend-audio-orange-origin-047c93e4a5e6a912.bin","orange-pcm":"friend-audio-orange-pcm-2b8d18074574356b.bin","orange-loop":"friend-audio-orange-loop-6d56b687e5e91619.bin"};
+  if (!/^[A-Za-z0-9_-]{43}$/.test(location.hash.slice(1))) return;
+  const room = new URL('./',location.href);
+  room.search = location.search;
+  room.hash = location.hash;
+  document.getElementById('back-to-room').href = room.href;
+  document.getElementById('return-to-room').href = room.href;
+  document.getElementById('gate-note').hidden = true;
+  document.getElementById('listen').hidden = false;
+  const allowed = new Set(Object.values(recordings));
+  let playing;
+  function pause() { playing?.pause(); }
+  window.addEventListener('pagehide',pause);
+  document.addEventListener('visibilitychange',() => { if(document.hidden) pause(); });
+  document.querySelectorAll('.set').forEach((group) => {
+    const names = group.dataset.tracks.split(' ');
+    const labels = group.dataset.labels?.split('|') || ['0.31 原版','0.32 候选'];
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = '载入这组录音';
+    button.setAttribute('aria-label','载入' + group.querySelector('h3').textContent + '录音');
+    const status = document.createElement('p');
+    status.className = 'status';
+    status.setAttribute('role','status');
+    const tracks = document.createElement('div');
+    tracks.className = 'tracks';
+    tracks.hidden = true;
+    group.append(button,status,tracks);
+    button.onclick = async () => {
+      button.disabled = true;
+      status.textContent = '正在载入…';
+      try {
+        const buffers = await Promise.all(names.map(name => openPacket(recordings[name],allowed)));
+        buffers.forEach((bytes,index) => {
+          const figure = document.createElement('figure');
+          const caption = document.createElement('figcaption');
+          caption.textContent = labels[index];
+          const audio = document.createElement('audio');
+          audio.controls = true;
+          audio.preload = 'none';
+          audio.setAttribute('aria-label',labels[index] + ' ' + group.querySelector('h3').textContent);
+          audio.src = URL.createObjectURL(new Blob([bytes],{type:'audio/mpeg'}));
+          audio.addEventListener('play',() => {
+            if (playing !== audio) pause();
+            playing = audio;
+          });
+          audio.addEventListener('error',() => { status.textContent='这段录音无法播放，请重开声音对照。'; });
+          figure.append(caption,audio);
+          tracks.append(figure);
+        });
+        tracks.hidden = false;
+        button.hidden = true;
+        status.textContent = '可以播放，点另一段会暂停当前录音。';
+      } catch {
+        status.textContent = '录音载入失败。请检查网络，再点一次载入。';
+      } finally {
+        button.disabled = false;
+      }
+    };
+  });
+})();
+</script>
+</body>
+</html>
