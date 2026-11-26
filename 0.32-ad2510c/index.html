@@ -26,7 +26,7 @@
     return key;
   }
 
-  async function openPacket(file, allowed, progress, signals = []) {
+  async function openPacket(file, allowed, progress, signals = [], priority) {
     if (!allowed.has(file)) throw Error('未知资源');
     const url = new URL('./' + file, location.href);
     if (url.origin !== location.origin) throw Error('资源域名无效');
@@ -45,6 +45,7 @@
         if (progress) progress.removeAttribute('value');
         arm(75000);
         const options = {mode:'same-origin', credentials:'omit', redirect:'error', referrerPolicy:'no-referrer'};
+        if (priority) options.priority = priority;
         if (ctrl) options.signal = ctrl.signal;
         if (attempt) options.cache = 'reload';
         const response = await fetch(url.href, options);
@@ -91,7 +92,7 @@
   try {
     state.textContent = '正在打开小屋…';
     progress.hidden = false;
-    const names = ["start-6a165866a6f91559.bin","compat-1c30ca09a92eafd8.bin"];
+    const names = ["start-d18571d2fc09cf03.bin","compat-d4e9441b3674cd04.bin"];
     const mode = new URLSearchParams(location.search).get('play');
     const previewIds = mode === 'wildcats' ? ['snow-leopard','lion','jaguar'] : mode === 'bigcats' ? ['tiger','cheetah'] : null;
     const posters = {"maine":"maine-a8bd6d34951bece9.bin","shaded":"shaded-900ba411696450be.bin","siberian":"siberian-387b85ae7da7c587.bin","ragdoll":"ragdoll-9ec5e7d2dc12c0b0.bin","tiger":"pond-b2d470a160a5d6bd.bin","golden":"golden-514c3007642fcb67.bin","cheetah":"cheetah-3335c664a7d8ff6c.bin","raccoon":"raccoon-1c4342c0da5ff3cc.bin","hamster":"hamster-9913be99a97c9fd5.bin","chinchilla":"chinchilla-0e514285d328ce39.bin","orange":"cat-90af5d80fa147dfb.bin","siamese":"breed-cat-siamese-bc91e6ba08d30d4b.bin","devon-rex":"breed-cat-devon-rex-4046635dfb7f0f20.bin","bengal":"breed-cat-bengal-1fc60c01ea478142.bin","american-shorthair":"breed-cat-american-shorthair-d1ee8488679ba51f.bin","russian-blue":"breed-cat-russian-blue-249d2eab303a3c33.bin","persian":"breed-cat-persian-5e182d94b7792be0.bin","exotic-shorthair":"breed-cat-exotic-shorthair-4efcff39377b1254.bin","norwegian-forest-cat":"breed-cat-norwegian-forest-cat-1fd1acb6a5c5cb2f.bin","abyssinian":"breed-cat-abyssinian-ccbc915bd00618c3.bin","scottish-fold":"breed-cat-scottish-fold-ce2714be4ccf1d71.bin","munchkin":"breed-cat-munchkin-a96b971436ac1139.bin","birman":"breed-cat-birman-f97f0e449fc9b152.bin","burmese":"breed-cat-burmese-c6d3903507952f1c.bin","black-house-cat":"breed-cat-black-house-cat-7c3ced920acbd25c.bin","lihua":"breed-cat-lihua-542611a0f46ccba2.bin","shiba-inu":"dog-shiba-inu-2bcfe448efbaed72.bin","pembroke-corgi":"dog-pembroke-corgi-ba0064db8d3cbe9b.bin","border-collie":"dog-border-collie-7ea8640b99dcdac0.bin","labrador":"dog-labrador-829a744bd6558b06.bin","samoyed":"dog-samoyed-950413ef7c473f81.bin","toy-poodle":"dog-toy-poodle-3d82255e6a101b69.bin","bichon-frise":"dog-bichon-frise-238ad98d153cbbc5.bin","siberian-husky":"dog-siberian-husky-63564fc728f5e63f.bin","german-shepherd":"dog-german-shepherd-28bc882d6efa3cf8.bin","snow-leopard":"snow-leopard-16d2f5ade1d2229f.bin","lion":"lion-f530b690ad687b91.bin","jaguar":"jaguar-fd9ca38d5e0734d1.bin"};
@@ -115,6 +116,22 @@
         reject(Error('启动超时'));
       }, 35000);
     });
+    let firstPurr;
+    if (!previewIds && first==='orange') {
+      try {
+        if (JSON.parse(localStorage.getItem('purr-room-juzi-v1'))?.sound!==false) {
+          const file = "domestic-566a3378d2b9b83c.bin";
+          firstPurr = new AbortController();
+          // Let the launcher and photograph requests get a head start.
+          setTimeout(() => {
+            if (firstPurr.signal.aborted) return;
+            window.huluFirstPurr = {file,controller:firstPurr,
+              result:openPacket(file,new Set([file]),null,[firstPurr.signal],'low')
+                .then(bytes=>({bytes}),error=>({error}))};
+          },0);
+        }
+      } catch {}
+    }
     const bytes = await Promise.race([
       openPacket(names[compressed ? 0 : 1], new Set(names), progress, startup ? [startup.signal] : []),
       timedOut

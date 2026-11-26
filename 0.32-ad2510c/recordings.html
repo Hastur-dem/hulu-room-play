@@ -109,7 +109,7 @@
     return key;
   }
 
-  async function openPacket(file, allowed, progress, signals = []) {
+  async function openPacket(file, allowed, progress, signals = [], priority) {
     if (!allowed.has(file)) throw Error('未知资源');
     const url = new URL('./' + file, location.href);
     if (url.origin !== location.origin) throw Error('资源域名无效');
@@ -128,6 +128,7 @@
         if (progress) progress.removeAttribute('value');
         arm(75000);
         const options = {mode:'same-origin', credentials:'omit', redirect:'error', referrerPolicy:'no-referrer'};
+        if (priority) options.priority = priority;
         if (ctrl) options.signal = ctrl.signal;
         if (attempt) options.cache = 'reload';
         const response = await fetch(url.href, options);
