@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow, noarchive">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src blob: data:; media-src blob:; connect-src 'self'; object-src 'none'; form-action 'none'; base-uri 'none'">
+  <title>呼噜小屋 · 好友试玩</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#f7f5ec;color:#344537;font:17px/1.65 system-ui,sans-serif;min-height:100vh;min-height:100svh;display:grid;place-items:center}main{max-width:26rem;padding:28px;text-align:center}h1{font:600 32px/1.2 Georgia,"Songti SC",serif}progress{accent-color:#475f49;width:100%;height:6px}button{border:0;border-radius:20px;background:#405b43;color:white;font:inherit;padding:6px 20px;cursor:pointer}
+  </style>
+</head>
+<body>
+<main><h1>呼噜小屋</h1><p id="state" role="status">请用朋友发来的完整链接打开试玩。</p><progress hidden id="progress"></progress><button hidden id="retry">重新载入</button></main>
+<script>
+(async () => {
+    let key;
+  function importInvite() {
+    const text = location.hash.slice(1);
+    if (!/^[A-Za-z0-9_-]{43}$/.test(text)) throw Error('无效的试玩链接');
+    if (!key) {
+      const bytes = Uint8Array.from(atob(text.replace(/-/g, '+').replace(/_/g, '/') + '='), c => c.charCodeAt(0));
+      key = crypto.subtle.importKey('raw', bytes, 'AES-GCM', false, ['decrypt']);
+    }
+    return key;
+  }
+
+  async function openPacket(file, allowed, progress, signals = [], priority) {
+    if (!allowed.has(file)) throw Error('未知资源');
+    const url = new URL('./' + file, location.href);
+    if (url.origin !== location.origin) throw Error('资源域名无效');
+    for (let attempt = 0; ; attempt++) {
+      const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+      const cancelled = () => signals.some(signal => signal.aborted);
+      if (cancelled()) throw new DOMException('Scene closed','AbortError');
+      const abort = () => ctrl?.abort();
+      for (const signal of signals) signal.addEventListener('abort',abort,{once:true});
+      let timeout;
+      function arm(ms) {
+        clearTimeout(timeout);
+        if (ctrl) timeout = setTimeout(() => ctrl.abort(), ms);
+      }
+      try {
+        if (progress) progress.removeAttribute('value');
+        arm(75000);
+        const options = {mode:'same-origin', credentials:'omit', redirect:'error', referrerPolicy:'no-referrer'};
+        if (priority) options.priority = priority;
+        if (ctrl) options.signal = ctrl.signal;
+        if (attempt) options.cache = 'reload';
+        const response = await fetch(url.href, options);
+        if (!response.ok) throw Error('HTTP ' + response.status);
+        let bytes;
+        if (progress && response.body && typeof response.body.getReader === 'function') {
+          const reader = response.body.getReader(), chunks = [];
+          const total = Number(response.headers.get('content-length'));
+          if (total > 0) progress.max = total;
+          let length = 0;
+          while (true) {
+            const part = await reader.read();
+            if (part.done) break;
+            chunks.push(part.value);
+            length += part.value.byteLength;
+            arm(75000);
+            if (total > 0) progress.value = length;
+          }
+          bytes = new Uint8Array(length);
+          let offset = 0;
+          for (const chunk of chunks) {bytes.set(chunk, offset); offset += chunk.byteLength;}
+        } else {
+          arm(300000);
+          bytes = new Uint8Array(await response.arrayBuffer());
+        }
+        if (bytes.length < 29) throw Error('资源不完整');
+        const params = {name:'AES-GCM', iv:bytes.subarray(0,12), additionalData:new TextEncoder().encode(file)};
+        return await crypto.subtle.decrypt(params, await importInvite(), bytes.subarray(12));
+      } catch (error) {
+        if (attempt || cancelled()) throw error;
+        await new Promise(resolve => setTimeout(resolve, 450));
+      } finally {
+        clearTimeout(timeout);
+        for (const signal of signals) signal.removeEventListener('abort',abort);
+      }
+    }
+  }
+
+  if (!/^[A-Za-z0-9_-]{43}$/.test(location.hash.slice(1))) return;
+  const state = document.getElementById('state'), progress = document.getElementById('progress');
+  document.getElementById('retry').onclick = () => location.reload();
+  const startup = typeof AbortController === 'function' ? new AbortController() : null;
+  let deadline;
+  try {
+    state.textContent = '正在打开小屋…';
+    progress.hidden = false;
+    const names = ["start-877006806bf11654.bin","compat-3581d8bce9a522ad.bin"];
+    const mode = new URLSearchParams(location.search).get('play');
+    const previewIds = mode === 'wildcats' ? ['snow-leopard','lion','jaguar'] : mode === 'bigcats' ? ['tiger','cheetah'] : null;
+    const posters = {"maine":"maine-2d51ee1988d4e0a7.bin","shaded":"shaded-2d74058db3e7461f.bin","siberian":"siberian-45342f3bc5172ac1.bin","ragdoll":"ragdoll-149c20768a88008c.bin","tiger":"pond-5aeebbaa22214b43.bin","golden":"golden-ad7a8b892f87a4cb.bin","cheetah":"cheetah-eea56d4c09531125.bin","raccoon":"raccoon-aedd7415c5db36c8.bin","hamster":"hamster-57531aca9c291b23.bin","chinchilla":"chinchilla-1173a0750646a5a0.bin","orange":"cat-afdd8126b9c16d74.bin","siamese":"breed-cat-siamese-b273274eb985a18a.bin","devon-rex":"breed-cat-devon-rex-263bd7ccd298b8fd.bin","bengal":"breed-cat-bengal-0614608c47f266ca.bin","american-shorthair":"breed-cat-american-shorthair-866191cae87aca31.bin","russian-blue":"breed-cat-russian-blue-13a42b89747a470a.bin","persian":"breed-cat-persian-959e83380c2bae36.bin","exotic-shorthair":"breed-cat-exotic-shorthair-5694ef54c663a3d9.bin","norwegian-forest-cat":"breed-cat-norwegian-forest-cat-1b1f88d52b957f80.bin","abyssinian":"breed-cat-abyssinian-b366f3cb58f42b09.bin","scottish-fold":"breed-cat-scottish-fold-e24b39864057e483.bin","munchkin":"breed-cat-munchkin-58e0971f49457784.bin","birman":"breed-cat-birman-d663bd4ef28ead8f.bin","burmese":"breed-cat-burmese-0104ebf5243d1314.bin","black-house-cat":"breed-cat-black-house-cat-4402a3e5c24ef3b8.bin","lihua":"breed-cat-lihua-14ab73a05c6e4515.bin","shiba-inu":"dog-shiba-inu-0c1797a8df3cddbe.bin","pembroke-corgi":"dog-pembroke-corgi-84e658c8ddbbce95.bin","border-collie":"dog-border-collie-56bdb06a0cba5d55.bin","labrador":"dog-labrador-8544b283772d03f2.bin","samoyed":"dog-samoyed-0b9ed196cbc7be18.bin","toy-poodle":"dog-toy-poodle-4fd3d3c1a826981d.bin","bichon-frise":"dog-bichon-frise-63c91a4af486d10f.bin","siberian-husky":"dog-siberian-husky-e2dea5402840bdf0.bin","german-shepherd":"dog-german-shepherd-5a394ca584554d29.bin","snow-leopard":"snow-leopard-07b002a03bb3eb36.bin","lion":"lion-13f020d3a1e32b2d.bin","jaguar":"jaguar-5e0114a14a259e35.bin"};
+    let lastAnimal, saved;
+    try {
+      const key = mode === 'wildcats' ? 'purr-room-wildcats-v1-friend033' : mode === 'bigcats' ? 'purr-room-bigcats-v1-friend033' : 'purr-room-juzi-v1-friend033';
+      saved = JSON.parse(localStorage.getItem(key));
+      lastAnimal = saved?.selected;
+    } catch {}
+    const first = previewIds ? (previewIds.includes(lastAnimal) ? lastAnimal : previewIds[0]) : (lastAnimal || 'orange');
+    if (Object.prototype.hasOwnProperty.call(posters, first)) {
+      const file = posters[first];
+      const controller = typeof AbortController === 'function' ? new AbortController() : null;
+      window.huluFirstPhoto = {file,controller, result:openPacket(file,new Set([file]),null,controller ? [controller.signal] : [])
+        .then(bytes => ({bytes}), error => ({error}))};
+    }
+    const compressed = typeof DecompressionStream === 'function' && typeof Blob.prototype.stream === 'function'
+      && typeof ReadableStream === 'function' && typeof ReadableStream.prototype.pipeThrough === 'function';
+    const timedOut = new Promise((_, reject) => {
+      deadline = setTimeout(() => {
+        startup?.abort();
+        reject(Error('启动超时'));
+      }, 35000);
+    });
+    const firstFiles={"portable":"tiger-entry-mobile-e4c61684e81b6073.bin","wide":"tiger-entry-e34979a6b25c0f20.bin","purr":"domestic-7f407241a1e9e520.bin"};
+    if (first==='tiger' && !matchMedia('(prefers-reduced-motion: reduce)').matches || first==='orange' && saved?.sound===true) {
+      const connection=navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+      const compact=connection?.saveData || (connection?.downlink>0 && connection.downlink<=2) ||
+        ['slow-2g','2g','3g'].includes(connection?.effectiveType) ||
+        (!connection && matchMedia('(max-width: 700px)').matches);
+      // Start after the main shell and keep this request on the current scene.
+      setTimeout(() => {
+        if (startup?.signal.aborted) return;
+        const file=first==='tiger' ? firstFiles[compact?'portable':'wide'] : firstFiles.purr;
+        const controller=new AbortController();
+        window.huluFirstMedia={file,controller,
+          result:openPacket(file,new Set([file]),null,[controller.signal],'low').then(bytes=>({bytes}),error=>({error}))};
+      },0);
+    }
+    const bytes = await Promise.race([
+      openPacket(names[compressed ? 0 : 1], new Set(names), progress, startup ? [startup.signal] : []),
+      timedOut
+    ]);
+    const html = compressed ? await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).text()
+      : new TextDecoder().decode(bytes);
+    document.open(); document.write(html); document.close();
+  } catch {
+    window.huluFirstPhoto?.controller?.abort();
+    delete window.huluFirstPhoto;
+    progress.hidden = true;
+    state.textContent = '载入失败。请检查网络，或重新打开朋友发来的完整链接。';
+    document.getElementById('retry').hidden = false;
+  } finally {
+    clearTimeout(deadline);
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow, noarchive">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src blob: data:; media-src blob:; connect-src 'self'; object-src 'none'; form-action 'none'; base-uri 'none'">
+  <title>呼噜小屋 · 盲听对照</title>
+  <style>
+    :root{color-scheme:light;background:#f7f4ec;color:#284436;font:16px/1.55 system-ui,sans-serif}
+    *{box-sizing:border-box}
+    body{max-width:43rem;margin:auto;padding:1.2rem 1rem 4rem}
+    h1,h2{font-family:Georgia,"Songti SC",SimSun,serif;line-height:1.25}
+    h1{font-size:clamp(1.8rem,7vw,2.5rem);margin:.55rem 0}
+    h2{margin:.15rem 0 .7rem}
+    p{margin:.55rem 0}
+    a{color:#30523f;text-underline-offset:.25em}
+    section{border-top:1px solid #d4dbce;padding:1rem 0}
+    form{margin-top:1rem}
+    button{min-height:44px;margin:.2rem .35rem .2rem 0;padding:.4rem .9rem;border:1px solid #365742;
+      border-radius:1.5rem;background:#365742;color:#fffdf4;font:inherit;cursor:pointer}
+    button:disabled{opacity:.62;cursor:wait}
+    button[data-action=silent]{background:transparent;color:#30523f}
+    label{display:block;margin:.65rem 0}
+    textarea,select,input{display:block;width:100%;padding:.5rem;font:inherit;color:inherit;
+      border:1px solid #a4ae9d;border-radius:.4rem;background:#fffdf6}
+    textarea{resize:vertical}
+    figure{margin:0}
+    audio{display:block;width:100%;min-height:44px}
+    video{display:block;width:min(100%,21rem);max-height:48vh;background:#eee9de;margin:.4rem 0}
+    .tracks{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,15rem),1fr));gap:.65rem;margin:.5rem 0}
+    .load-status{font-size:.92rem;color:#43574a}
+    :focus-visible{outline:2px solid #4a6d55;outline-offset:3px}
+    [hidden]{display:none!important}
+  </style>
+</head>
+<body>
+<header>
+  <a id="back-to-room" href="./">返回小屋</a>
+  <h1>呼噜小屋 · 盲听对照</h1>
+  <p id="gate-note">请用朋友发来的完整链接打开小屋，再点「盲听对照」。</p>
+</header>
+<main id="listen" hidden>
+  <p>用手机外放，听两段时保持同一档低媒体音量。每组的 A、B 可以任意顺序听。</p>
+  <form id="listening">
+    <div id="groups"></div>
+    <label>设备（选填）<input name="device" autocomplete="off" maxlength="80" placeholder="例如 iPhone 或安卓"></label>
+    <button type="submit">生成试听记录</button>
+  </form>
+  <section id="result" hidden>
+    <h2>这次的记录</h2>
+    <label>试听记录<textarea id="result-text" rows="7" readonly></textarea></label>
+    <button id="copy-result" type="button">复制记录</button>
+    <p id="copy-status" role="status"></p>
+  </section>
+</main>
+<template id="row">
+  <section>
+    <h2></h2>
+    <button type="button" data-action="audio">载入 A、B</button>
+    <button type="button" data-action="silent">看无声画面</button>
+    <p role="status" class="load-status" data-status="audio" hidden></p>
+    <div class="tracks" hidden>
+      <figure><figcaption>录音 A</figcaption><audio controls preload="none" aria-label="录音 A"></audio></figure>
+      <figure><figcaption>录音 B</figcaption><audio controls preload="none" aria-label="录音 B"></audio></figure>
+    </div>
+    <p role="status" class="load-status" data-status="silent" hidden></p>
+    <video controls muted playsinline preload="none" aria-label="无声画面" hidden></video>
+    <label>你留意到什么？可以记下时间点或动作。<textarea rows="2" maxlength="800"></textarea></label>
+    <label>如果只留一种，你选哪种？
+      <select>
+        <option value="">暂不选</option>
+        <option>A</option><option>B</option>
+        <option value="silent">无声画面</option>
+        <option value="none">没有偏好</option>
+      </select>
+    </label>
+  </section>
+</template>
+<script>
+(() => {
+    let key;
+  function importInvite() {
+    const text = location.hash.slice(1);
+    if (!/^[A-Za-z0-9_-]{43}$/.test(text)) throw Error('无效的试玩链接');
+    if (!key) {
+      const bytes = Uint8Array.from(atob(text.replace(/-/g, '+').replace(/_/g, '/') + '='), c => c.charCodeAt(0));
+      key = crypto.subtle.importKey('raw', bytes, 'AES-GCM', false, ['decrypt']);
+    }
+    return key;
+  }
+
+  async function openPacket(file, allowed, progress, signals = [], priority) {
+    if (!allowed.has(file)) throw Error('未知资源');
+    const url = new URL('./' + file, location.href);
+    if (url.origin !== location.origin) throw Error('资源域名无效');
+    for (let attempt = 0; ; attempt++) {
+      const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+      const cancelled = () => signals.some(signal => signal.aborted);
+      if (cancelled()) throw new DOMException('Scene closed','AbortError');
+      const abort = () => ctrl?.abort();
+      for (const signal of signals) signal.addEventListener('abort',abort,{once:true});
+      let timeout;
+      function arm(ms) {
+        clearTimeout(timeout);
+        if (ctrl) timeout = setTimeout(() => ctrl.abort(), ms);
+      }
+      try {
+        if (progress) progress.removeAttribute('value');
+        arm(75000);
+        const options = {mode:'same-origin', credentials:'omit', redirect:'error', referrerPolicy:'no-referrer'};
+        if (priority) options.priority = priority;
+        if (ctrl) options.signal = ctrl.signal;
+        if (attempt) options.cache = 'reload';
+        const response = await fetch(url.href, options);
+        if (!response.ok) throw Error('HTTP ' + response.status);
+        let bytes;
+        if (progress && response.body && typeof response.body.getReader === 'function') {
+          const reader = response.body.getReader(), chunks = [];
+          const total = Number(response.headers.get('content-length'));
+          if (total > 0) progress.max = total;
+          let length = 0;
+          while (true) {
+            const part = await reader.read();
+            if (part.done) break;
+            chunks.push(part.value);
+            length += part.value.byteLength;
+            arm(75000);
+            if (total > 0) progress.value = length;
+          }
+          bytes = new Uint8Array(length);
+          let offset = 0;
+          for (const chunk of chunks) {bytes.set(chunk, offset); offset += chunk.byteLength;}
+        } else {
+          arm(300000);
+          bytes = new Uint8Array(await response.arrayBuffer());
+        }
+        if (bytes.length < 29) throw Error('资源不完整');
+        const params = {name:'AES-GCM', iv:bytes.subarray(0,12), additionalData:new TextEncoder().encode(file)};
+        return await crypto.subtle.decrypt(params, await importInvite(), bytes.subarray(12));
+      } catch (error) {
+        if (attempt || cancelled()) throw error;
+        await new Promise(resolve => setTimeout(resolve, 450));
+      } finally {
+        clearTimeout(timeout);
+        for (const signal of signals) signal.removeEventListener('abort',abort);
+      }
+    }
+  }
+
+  const tracks={"q17":"friend-blind-q17-93e704d7cef8eaf6.bin","q42":"friend-blind-q42-60643f02e1f466ca.bin","q25":"friend-blind-q25-40862bf4922e5c48.bin","q68":"friend-blind-q68-4a2f45e353045da4.bin","v20":"friend-blind-v20-0b5cd2087c6989a8.bin","v64":"friend-blind-v64-f0ca0ea0f65525b5.bin"};
+  if (!/^[A-Za-z0-9_-]{43}$/.test(location.hash.slice(1))) return;
+  const root=new URL('./',location.href);
+  root.hash=location.hash;
+  root.search=location.search;
+  document.getElementById('back-to-room').href=root.href;
+  document.getElementById('gate-note').hidden=true;
+  document.getElementById('listen').hidden=false;
+
+  const codes=['K7','M4','R6','T2'];
+  let order=crypto.getRandomValues(new Uint8Array(1))[0] & 3;
+  try {
+    const saved=sessionStorage.getItem('hulu033-blind-order');
+    if (codes.includes(saved)) order=codes.indexOf(saved);
+    else sessionStorage.setItem('hulu033-blind-order',codes[order]);
+  } catch {}
+  const allowed=new Set(Object.values(tracks));
+  const groups=[
+    {id:'orange',label:'橘子',names:['q17','q42'],silent:'v20',flip:1},
+    {id:'golden',label:'麦穗',names:['q25','q68'],silent:'v64',flip:2}
+  ];
+  let playing;
+  function pause() {playing?.pause();}
+  document.addEventListener('play',event=>{
+    if (document.hidden) {event.target.pause();return;}
+    if (playing!==event.target) pause();
+    playing=event.target;
+  },true);
+  window.addEventListener('pagehide',pause);
+  document.addEventListener('visibilitychange',()=>{if(document.hidden) pause();});
+
+  async function media(name,format) {
+    const bytes=await openPacket(tracks[name],allowed);
+    return URL.createObjectURL(new Blob([bytes],{type:format}));
+  }
+  function loader(section,action,load) {
+    const button=section.querySelector('[data-action='+action+']');
+    const status=section.querySelector('[data-status='+action+']');
+    button.onclick=async()=>{
+      button.disabled=true;
+      status.hidden=false;
+      status.textContent='正在载入…';
+      try {
+        await load();
+        status.hidden=true;
+        button.hidden=true;
+      } catch {
+        status.textContent='载入失败，请再点一次。';
+      } finally {button.disabled=false;}
+    };
+  }
+  for (const group of groups) {
+    const section=document.getElementById('row').content.firstElementChild.cloneNode(true);
+    section.dataset.blindGroup=group.id;
+    section.querySelector('h2').textContent=group.label;
+    section.querySelector('textarea').name=group.id+'Note';
+    section.querySelector('select').name=group.id+'Choice';
+    loader(section,'audio',async()=>{
+      const ids=order & group.flip ? [...group.names].reverse() : group.names;
+      // Resolve both packet bytes before making either playable.
+      const bytes=await Promise.all(ids.map(id=>openPacket(tracks[id],allowed)));
+      section.querySelectorAll('audio').forEach((audio,i)=>{
+        audio.src=URL.createObjectURL(new Blob([bytes[i]],{type:'audio/mpeg'}));
+      });
+      section.querySelector('.tracks').hidden=false;
+    });
+    loader(section,'silent',async()=>{
+      const video=section.querySelector('video');
+      video.src=await media(group.silent,'video/mp4');
+      video.hidden=false;
+    });
+    document.getElementById('groups').append(section);
+  }
+  const form=document.getElementById('listening');
+  const result=document.getElementById('result');
+  const text=document.getElementById('result-text');
+  const status=document.getElementById('copy-status');
+  form.onsubmit=event=>{
+    event.preventDefault();
+    const values=new FormData(form);
+    const choices={A:'A',B:'B',silent:'无声画面',none:'没有偏好'};
+    const lines=['呼噜小屋试听记录','顺序码 '+codes[order]];
+    const device=String(values.get('device')||'').trim();
+    if (device) lines.push('设备 '+device);
+    for (const group of groups) {
+      const choice=choices[values.get(group.id+'Choice')]||'暂不选';
+      const note=String(values.get(group.id+'Note')||'').trim();
+      lines.push(group.label+' · '+choice);
+      if (note) lines.push(note);
+    }
+    text.value=lines.join('\n');
+    result.hidden=false;
+    status.textContent='';
+    result.scrollIntoView({block:'nearest'});
+  };
+  document.getElementById('copy-result').onclick=async()=>{
+    try {
+      await navigator.clipboard.writeText(text.value);
+      status.textContent='已复制。';
+    } catch {
+      text.focus();
+      text.select();
+      status.textContent='可长按选中的文字复制。';
+    }
+  };
+})();
+</script>
+</body>
+</html>
